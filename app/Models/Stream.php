@@ -6,8 +6,10 @@ use App\Services\Youtube\StreamData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Support\Stringable;
 use Spatie\Feed\Feedable;
@@ -19,30 +21,57 @@ class Stream extends Model implements Feedable
     use HasFactory;
 
     protected $fillable = [
+        'channel_id',
         'channel_title',
         'youtube_id',
         'title',
         'description',
         'thumbnail_url',
         'scheduled_start_time',
+        'actual_start_time',
+        'actual_end_time',
+        'hidden_at',
         'status',
         'tweeted_at',
+        'upcoming_tweeted_at',
         'language_code',
+        'submitted_by_email',
+        'approved_at',
     ];
 
     protected $casts = [
+        'approved_at' => 'datetime',
         'scheduled_start_time' => 'datetime',
+        'actual_start_time' => 'datetime',
+        'actual_end_time' => 'datetime',
+        'hidden_at' => 'datetime',
         'tweeted_at' => 'datetime',
+        'upcoming_tweeted_at' => 'datetime',
     ];
+
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(Channel::class);
+    }
+
+    public function scopeApproved(Builder $query): void
+    {
+        $query->whereNotNull('approved_at');
+    }
 
     public static function getFeedItems(): Collection
     {
         return static::query()->upcoming()->get();
     }
 
-    public function hasBeenTweeted(): bool
+    public function tweetStreamIsLiveWasSend(): bool
     {
         return ! is_null($this->tweeted_at);
+    }
+
+    public function tweetStreamIsUpcomingWasSend(): bool
+    {
+        return ! is_null($this->upcoming_tweeted_at);
     }
 
     public function markAsTweeted(): self
@@ -57,12 +86,45 @@ class Stream extends Model implements Feedable
         return $this->status === StreamData::STATUS_LIVE;
     }
 
+    public function scopeLive(Builder $query): Builder
+    {
+        return $query->where('status', StreamData::STATUS_LIVE);
+    }
+
     public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query->where('status', StreamData::STATUS_UPCOMING);
+    }
+
+    public function scopeUpcomingOrLive(Builder $query): Builder
     {
         return $query->whereIn('status', [
             StreamData::STATUS_LIVE,
             StreamData::STATUS_UPCOMING,
         ]);
+    }
+
+    public function scopeLiveOrFinished(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            StreamData::STATUS_LIVE,
+            StreamData::STATUS_FINISHED,
+        ]);
+    }
+
+    public function scopeFromLatestToOldest(Builder $query): Builder
+    {
+        return $query->orderByDesc('scheduled_start_time');
+    }
+
+    public function scopeFromOldestToLatest(Builder $query): Builder
+    {
+        return $query->orderBy('scheduled_start_time');
+    }
+
+    public function scopeFinished(Builder $query): Builder
+    {
+        return $query->where('status', StreamData::STATUS_FINISHED);
     }
 
     public function scopeNotOlderThanAYear(Builder $query): Builder
@@ -72,6 +134,11 @@ class Stream extends Model implements Feedable
             '>=',
             now()->subYear()->startOfYear()
         );
+    }
+
+    public function scopeWithinUpcomingTweetRange(Builder $query): Builder
+    {
+        return $query->where('scheduled_start_time', '<=', now()->addMinutes(5));
     }
 
     public function toFeedItem(): FeedItem
@@ -117,5 +184,39 @@ class Stream extends Model implements Feedable
         $url = parse_url(route('calendar.ics.stream', $this));
 
         return "webcal://{$url['host']}{$url['path']}";
+    }
+
+    public function approveUrl(): string
+    {
+        return URL::temporarySignedRoute(
+            'stream.approve',
+            now()->addMonth(),
+            ['stream' => $this],
+        );
+    }
+
+    public function rejectUrl(): string
+    {
+        return URL::temporarySignedRoute(
+            'stream.reject',
+            now()->addMonth(),
+            ['stream' => $this],
+        );
+    }
+
+    public function isApproved(): bool
+    {
+        return ! is_null($this->approved_at);
+    }
+
+    public function getDurationAttribute(): ?string
+    {
+        if (is_null($this->actual_end_time)) {
+            return null;
+        }
+
+        $start_time = $this->actual_start_time ?? $this->scheduled_start_time;
+
+        return $start_time->longAbsoluteDiffForHumans($this->actual_end_time, 2);
     }
 }

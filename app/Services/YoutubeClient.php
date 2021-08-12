@@ -64,11 +64,14 @@ class YoutubeClient
             ->map(fn(array $item) => new StreamData(
                 videoId: data_get($item, 'id'),
                 title: data_get($item, 'snippet.title'),
+                channelId: data_get($item, 'snippet.channelId'),
                 channelTitle: data_get($item, 'snippet.channelTitle'),
                 description: data_get($item, 'snippet.description'),
                 thumbnailUrl: last(data_get($item, 'snippet.thumbnails'))['url'] ?? null,
                 publishedAt: $this->toCarbon(data_get($item, 'snippet.publishedAt')),
                 plannedStart: $this->getPlannedStart($item),
+                actualStartTime: $this->toCarbon(data_get($item, 'liveStreamingDetails.actualStartTime')),
+                actualEndTime: $this->toCarbon(data_get($item, 'liveStreamingDetails.actualEndTime')),
                 status: data_get($item, 'snippet.liveBroadcastContent'),
             ));
     }
@@ -86,7 +89,7 @@ class YoutubeClient
             ->get($url, array_merge($params, [
                 'key' => config('services.youtube.key'),
             ]))
-            ->onError(fn(Response $response) => throw YoutubeException::general($response->status()))
+            ->onError(fn(Response $response) => throw YoutubeException::general($response->status(), $response->body()))
             ->json($key, []);
     }
 

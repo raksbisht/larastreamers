@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Facades\Youtube;
+use App\Models\Channel;
 use App\Models\Stream;
 use App\Services\Youtube\StreamData;
 use Illuminate\Bus\Queueable;
@@ -15,7 +16,7 @@ class ImportYoutubeChannelStreamsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $youtubeChannelId, public string $language)
+    public function __construct(public string $youtubeChannelId, public string $languageCode = 'en')
     {
     }
 
@@ -25,14 +26,16 @@ class ImportYoutubeChannelStreamsJob implements ShouldQueue
 
         $streams->map(function(StreamData $streamData) {
             Stream::updateOrCreate(['youtube_id' => $streamData->videoId], [
+                'channel_id' => optional(Channel::where('platform_id', $streamData->channelId)->first())->id,
                 'youtube_id' => $streamData->videoId,
                 'title' => $streamData->title,
                 'description' => $streamData->description,
                 'channel_title' => $streamData->channelTitle,
                 'thumbnail_url' => $streamData->thumbnailUrl,
                 'scheduled_start_time' => $streamData->plannedStart,
-                'language_code' => $this->language,
+                'language_code' => $this->languageCode,
                 'status' => $streamData->status,
+                'approved_at' => now(),
             ]);
         });
     }
