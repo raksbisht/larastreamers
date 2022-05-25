@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Sushi\Sushi;
 
+/**
+ * @property string $code
+ */
 class Language extends Model
 {
     use Sushi;
@@ -111,7 +114,7 @@ class Language extends Model
         ['code' => 'mt', 'name' => 'Maltese'],
         ['code' => 'my', 'name' => 'Burmese'],
         ['code' => 'na', 'name' => 'Nauru'],
-        ['code' => 'nb', 'name' => "Bokm\u00e5l, Norwegian"],
+        ['code' => 'nb', 'name' => 'Bokmål, Norwegian'],
         ['code' => 'nd', 'name' => 'Ndebele, North'],
         ['code' => 'ne', 'name' => 'Nepali'],
         ['code' => 'ng', 'name' => 'Ndonga'],
@@ -175,7 +178,7 @@ class Language extends Model
         ['code' => 'uz', 'name' => 'Uzbek'],
         ['code' => 've', 'name' => 'Venda'],
         ['code' => 'vi', 'name' => 'Vietnamese'],
-        ['code' => 'vo', 'name' => "Volap\u00fck"],
+        ['code' => 'vo', 'name' => 'Volapük'],
         ['code' => 'wa', 'name' => 'Walloon'],
         ['code' => 'wo', 'name' => 'Wolof'],
         ['code' => 'xh', 'name' => 'Xhosa'],

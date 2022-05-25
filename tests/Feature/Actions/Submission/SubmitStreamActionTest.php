@@ -1,47 +1,35 @@
 <?php
 
-namespace Tests\Feature\Actions\Submission;
-
 use App\Actions\Submission\SubmitStreamAction;
-use App\Facades\Youtube;
+use App\Facades\YouTube;
 use App\Mail\StreamSubmittedMail;
 use App\Models\Stream;
-use App\Services\Youtube\StreamData;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\YouTube\StreamData;
 use Illuminate\Support\Facades\Mail;
-use Tests\TestCase;
 
-class SubmitStreamActionTest extends TestCase
-{
-    use RefreshDatabase;
+it('can store a stream', function() {
+    // Arrange
+    Mail::fake();
+    YouTube::partialMock()
+        ->shouldReceive('videos')
+        ->andReturn(collect([
+            StreamData::fake(
+                videoId: '1234',
+            ),
+        ]));
 
-    private string $youTubeId = '1234';
+    // Act
+    $action = app(SubmitStreamAction::class);
+    $action->handle('1234', 'de', 'john@example.com');
 
-    /** @test */
-    public function it_can_store_a_stream(): void
-    {
-        // Arrange
-        Mail::fake();
-        Youtube::partialMock()
-            ->shouldReceive('videos')
-            ->andReturn(collect([
-                StreamData::fake(
-                    videoId: $this->youTubeId,
-                ),
-            ]));
+    // Assert
+    $stream = Stream::firstWhere('youtube_id', '1234');
+    $this->assertNotNull($stream);
 
-        // Act
-        $action = app(SubmitStreamAction::class);
-        $action->handle($this->youTubeId, 'de', 'john@example.com');
+    expect($stream)
+        ->isApproved()->toBeFalse()
+        ->submitted_by_email->toBe('john@example.com')
+        ->language_code->toBe('de');
 
-        // Assert
-        $stream = Stream::firstWhere('youtube_id', $this->youTubeId);
-        $this->assertNotNull($stream);
-
-        $this->assertFalse($stream->isApproved());
-        $this->assertEquals('john@example.com', $stream->submitted_by_email);
-        $this->assertEquals('de', $stream->language_code);
-
-        Mail::assertQueued(fn(StreamSubmittedMail $mail) => $mail->hasTo('christoph@christoph-rumpel.com'));
-    }
-}
+    Mail::assertQueued(fn(StreamSubmittedMail $mail) => $mail->hasTo('christoph@christoph-rumpel.com'));
+});

@@ -16,98 +16,33 @@
     <link rel="alternate icon"
           href="{{ asset('images/favicon-tv.png') }}">
 
-    <meta name="description"
-          content="{{ $description }}">
-
-    <meta name="author"
-          content="Christoph Rumpel">
-
-    <meta property="og:url"
-          content="{{ url('') }}"/>
-
-    <meta property="og:type"
-          content="website"/>
-
-    <meta property="og:title"
-          content="{{ $title }}"/>
-
-    <meta property="og:description"
-          content="{{ $description }}"/>
-
-    <meta property="og:image"
-          content="{{ asset('images/larastreamers_social.png') }}"/>
+    @include('pages.partials.meta')
 
     <link href="{{ mix('css/app.css') }}"
           rel="stylesheet"/>
 
-@include('feed::links')
+    @include('feed::links')
 
-@livewireStyles
+    @livewireStyles
 
-<!-- Fathom - beautiful, simple website analytics -->
-    <script src="https://cdn.usefathom.com/script.js"
-            data-site="POMKLANK"
-            defer></script>
+    <!-- Fathom - beautiful, simple website analytics -->
+    @production
+        <script src="https://cdn.usefathom.com/script.js" data-site="POMKLANK" defer></script>
+    @endproduction
     <!-- / Fathom -->
+
 </head>
 
-<body class="flex flex-col min-h-screen font-sans antialiased text-gray-800 bg-gray-100">
+<body class="flex flex-col min-h-screen font-sans antialiased" x-data="{ showSubmissionModal: false, showMobileNav: false }">
 
-@include('pages.partials.nav')
+{{ $slot ?? '' }}
 
-<section class="py-12 md:py-16">
-    <div class="w-full max-w-6xl px-4 mx-auto sm:px-6 md:px-8">
-        <header class="flex flex-col items-start justify-between gap-8 md:items-center md:flex-row">
-            <aside class="max-w-xl space-y-4">
-                <h1 class="text-4xl font-bold tracking-tight md:text-5xl">
-                    📺 Larastreamers
-                </h1>
+@include('pages.partials.footer')
 
-                <p class="text-gray-500 md:text-xl">
-                    There is no better way to learn than by watching other developers
-                    code live. Find out who is streaming next in the Laravel world.
-                </p>
-            </aside>
-
-
-            @if($showCalendarDownloads)
-                <x-add-streams-to-calendar />
-            @endif
-        </header>
-    </div>
-</section>
-
-<main class="flex-1 text-white bg-gray-700">
-    {{ $slot ?? '' }}
-</main>
-
-<footer class="text-white bg-gray-700">
-    <div class="w-full max-w-6xl px-4 mx-auto sm:px-6 md:px-8">
-        <nav class="flex flex-col justify-between gap-4 py-8 border-t border-gray-600 md:items-center md:flex-row">
-            <p class="text-sm text-gray-300">
-                <b class="text-white">Larastreamers</b> - A project by <a target="_blank"
-                                                                          href="https://christoph-rumpel.com">Christoph
-                    Rumpel</a>
-            </p>
-
-            <ul class="flex items-center space-x-6 text-sm">
-                <li>
-                    <a class="hover:underline"
-                       target="_blank"
-                       href="https://twitter.com/larastreamers">Twitter</a>
-                </li>
-
-                <li>
-                    <a class="hover:underline"
-                       target="_blank"
-                       href="https://github.com/christophrumpel/larastreamers">GitHub</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</footer>
+@include('pages.partials.submit-modal')
 
 @livewireScripts
+<!-- @TODO: not working together -->
 <script src="{{ mix('js/app.js') }}"></script>
 @stack('scripts')
 

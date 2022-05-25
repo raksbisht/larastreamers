@@ -9,10 +9,22 @@ It shows you who is live coding next in the Laravel world.
 
 ## Installation Steps
 
+> prerequisite: PHP > 8.0
+
 * clone repository
+* `composer install`
+
+### Local installation
+
 * Create DB `larastreamers`
 * `composer install`
 * `composer setup` (copies `env` file, generates key, and migrates DB)
+
+### Laravel Sail
+
+* copy `.env.example` to `.env`
+* run `./vendor/bin/sail up -d`
+* run `./vendor/bin/sail composer setup` (generates key, and migrates DB)
 
 ## Setup
 
@@ -25,23 +37,7 @@ In order to import videos from  YouTube you need:
 
 ## Roadmap
 
-* [x] Backup DB (Laravel Backup)
-* [x] RSS Feed
-* [x] Better timezone support (using timezone through browser
-* [x] Automatically check for updates on stored streams
-* [x] Automatically fix styles on PRs (after PR is merged)
-* [x] Add Twitter channel import to load its upcoming live streams
-* [x] Show when a stream is currently live
-* [x] Store the description of a stream too, so we can use it for the calendar
-* [x] Calendar link for every event
-* [x] Twitter integration (tweet when stream is live)
-* [x] Mocking Twitter so we can get off the production check
-* [x] Archive with old streams
-* [x] Streams of stored channels will be imported automaticall (every hour) 
-* [ ] Pagination for archive page
-* [ ] Approval flow (planned by Freek)
-* [ ] Add Twitter tag to Twitter posts about streams that go live (only for stored channels)
-* [ ] Add search to archive (when archive ready)
+Currently, there are no big updates planned.
 
 ## Contribute
 

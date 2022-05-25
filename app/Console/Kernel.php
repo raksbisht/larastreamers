@@ -4,9 +4,12 @@ namespace App\Console;
 
 use App\Console\Commands\CheckIfLiveStreamsHaveEndedCommand;
 use App\Console\Commands\CheckIfUpcomingStreamsAreLiveCommand;
+use App\Console\Commands\ImportChannelsForStreamsCommand;
 use App\Console\Commands\ImportChannelStreamsCommand;
 use App\Console\Commands\TweetAboutLiveStreamsCommand;
 use App\Console\Commands\TweetAboutUpcomingStreamsCommand;
+use App\Console\Commands\TweetAboutWeeklySummaryCommand;
+use App\Console\Commands\UpdateChannelsCommand;
 use App\Console\Commands\UpdateLiveAndFinishedStreamsCommand;
 use App\Console\Commands\UpdateUpcomingStreamsCommand;
 use Illuminate\Console\Scheduling\Schedule;
@@ -25,6 +28,8 @@ class Kernel extends ConsoleKernel
         TweetAboutLiveStreamsCommand::class,
         UpdateUpcomingStreamsCommand::class,
         ImportChannelStreamsCommand::class,
+        TweetAboutWeeklySummaryCommand::class,
+        ImportChannelsForStreamsCommand::class,
     ];
 
     /**
@@ -41,6 +46,8 @@ class Kernel extends ConsoleKernel
         $schedule->command(TweetAboutLiveStreamsCommand::class)->everyMinute();
         $schedule->command(TweetAboutUpcomingStreamsCommand::class)->everyMinute();
         $schedule->command(ImportChannelStreamsCommand::class)->hourly();
+        $schedule->command(TweetAboutWeeklySummaryCommand::class)->weeklyOn(1, '8:00');
+        $schedule->command(UpdateChannelsCommand::class)->weeklyOn(1, '8:00');
     }
 
     /**

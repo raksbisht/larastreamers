@@ -10,22 +10,22 @@ use Livewire\Component;
 
 class SubmitYouTubeLiveStream extends Component
 {
-    public $youTubeId;
+    public string $youTubeIdOrUrl = '';
 
-    public $submittedByEmail;
+    public string $submittedByEmail = '';
 
     public string $languageCode = 'en';
 
-    protected $messages = [
-        'youTubeId.required' => 'The YouTube ID field cannot be empty.',
-        'youTubeId.unique' => 'This stream was already submitted.',
+    protected array $messages = [
+        'youTubeIdOrUrl.required' => 'The YouTube ID field cannot be empty.',
+        'youTubeIdOrUrl.unique' => 'This stream was already submitted.',
         'submittedByEmail.required' => 'The Email field cannot be empty.',
     ];
 
     public function rules(): array
     {
         return [
-            'youTubeId' => ['required', Rule::unique('streams', 'youtube_id'), new YouTubeRule()],
+            'youTubeIdOrUrl' => ['required', Rule::unique('streams', 'youtube_id'), new YouTubeRule()],
             'submittedByEmail' => 'required',
         ];
     }
@@ -40,9 +40,9 @@ class SubmitYouTubeLiveStream extends Component
         $this->validate();
 
         $action = app(SubmitStreamAction::class);
-        $action->handle($this->youTubeId, $this->languageCode, $this->submittedByEmail);
+        $action->handle((new YouTubeRule())->determineYoutubeId($this->youTubeIdOrUrl), $this->languageCode, $this->submittedByEmail);
 
         session()->flash('message', 'You successfully submitted your stream. You will receive an email, if it gets approved.');
-        $this->reset(['youTubeId', 'languageCode', 'submittedByEmail']);
+        $this->reset(['youTubeIdOrUrl', 'languageCode', 'submittedByEmail']);
     }
 }

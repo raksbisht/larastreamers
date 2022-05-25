@@ -10,12 +10,15 @@ class ImportChannelStreamsCommand extends Command
 {
     protected $signature = 'larastreamers:import-channel-streams';
 
-    protected $description = 'Command description';
+    protected $description = 'Import all streams of auto-import channels.';
 
     public function handle(): int
     {
-        Channel::all()
-            ->each(fn(Channel $channel) => dispatch(new ImportYoutubeChannelStreamsJob($channel->platform_id, $channel->language_code)));
+        Channel::autoImportEnabled()
+            ->get()
+            ->each(function(Channel $channel) {
+                dispatch(new ImportYoutubeChannelStreamsJob($channel->platform_id, $channel->language_code));
+            });
 
         return self::SUCCESS;
     }

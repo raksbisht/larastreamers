@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use App\Services\Youtube\StreamData;
+use App\Services\YouTube\StreamData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +17,7 @@ use Illuminate\Support\Stringable;
 use Spatie\Feed\Feedable;
 use Spatie\Feed\FeedItem;
 use Spatie\IcalendarGenerator\Components\Event;
+use Vinkla\Hashids\Facades\Hashids;
 
 class Stream extends Model implements Feedable
 {
@@ -22,7 +25,6 @@ class Stream extends Model implements Feedable
 
     protected $fillable = [
         'channel_id',
-        'channel_title',
         'youtube_id',
         'title',
         'description',
@@ -54,9 +56,17 @@ class Stream extends Model implements Feedable
         return $this->belongsTo(Channel::class);
     }
 
-    public function scopeApproved(Builder $query): void
+    public function scopeApproved(Builder $query): Builder
     {
-        $query->whereNotNull('approved_at');
+        return $query->whereNotNull('approved_at');
+    }
+
+    public function scopeFromLastWeek(Builder $query): Builder
+    {
+        return $query->whereBetween('actual_start_time', [
+            Carbon::today()->subWeek()->startOfWeek(),
+            Carbon::today()->subWeek()->endOfWeek()->endOfDay(),
+        ]);
     }
 
     public static function getFeedItems(): Collection
@@ -104,6 +114,16 @@ class Stream extends Model implements Feedable
         ]);
     }
 
+    public static function getNextUpcomingOrLive(): ?Stream
+    {
+        return Stream::query()
+            ->with('channel:id,name')
+            ->approved()
+            ->upcomingOrLive()
+            ->fromOldestToLatest()
+            ->first();
+    }
+
     public function scopeLiveOrFinished(Builder $query): Builder
     {
         return $query->whereIn('status', [
@@ -141,15 +161,47 @@ class Stream extends Model implements Feedable
         return $query->where('scheduled_start_time', '<=', now()->addMinutes(5));
     }
 
+    public function scopeScheduledTimeNotPassed(Builder $query): Builder
+    {
+        return $query->where('scheduled_start_time', '>=', now());
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        return $query->when($search, function(Builder $builder, ?string $search) {
+            $builder->where(function(Builder $query) use ($search) {
+                $query
+                    ->where('title', 'like', "%$search%")
+                    ->orWhereHas('channel', function($query) use ($search) {
+                        $query->where('name', 'like', "%$search%");
+                    });
+            });
+        });
+    }
+
+    public function scopeByStreamer(Builder $query, ?string $streamerHashid): Builder
+    {
+        if (! $streamerHashid) {
+            return $query;
+        }
+
+        $channelId = Hashids::decode($streamerHashid)[0] ?? null;
+
+        return $query->when(
+            $channelId,
+            fn(Builder $builder, ?string $streamerHashid) => $builder->where(fn(Builder $query) => $query->where('channel_id', $channelId))
+        );
+    }
+
     public function toFeedItem(): FeedItem
     {
         return FeedItem::create()
-            ->id($this->id)
+            ->id((string) $this->id)
             ->title($this->title)
-            ->summary($this->description)
-            ->updated($this->updated_at)
+            ->summary((string) $this->description)
+            ->updated($this->updated_at ?? now())
             ->link($this->url())
-            ->author($this->channel_title); //TODO: implement
+            ->authorName($this->channel()->first(['id', 'name'])?->name ?? '');
     }
 
     public function url(): string
@@ -165,14 +217,15 @@ class Stream extends Model implements Feedable
             ->url($this->url())
             ->description(implode(PHP_EOL, [
                 $this->title,
-                $this->channel_title,
+                $this->channel?->name,
                 $this->url(),
-                Str::of($this->description)
-                    ->whenNotEmpty(fn(Stringable $description) => $description->prepend(str_repeat('-', 15).PHP_EOL)),
+                Str::of((string) $this->description)
+                    ->whenNotEmpty(fn(Stringable $description) => $description->prepend(str_repeat('-', 15).PHP_EOL))
+                    ->remove("\r"),
             ]))
             ->startsAt($this->scheduled_start_time)
             ->endsAt($this->scheduled_start_time->clone()->addHour())
-            ->createdAt($this->created_at);
+            ->createdAt($this->created_at ?? now());
     }
 
     public function language(): HasOne
@@ -182,6 +235,7 @@ class Stream extends Model implements Feedable
 
     public function toWebcalLink(): string
     {
+        /** @var string[] $url */
         $url = parse_url(route('calendar.ics.stream', $this));
 
         return "webcal://{$url['host']}{$url['path']}";
@@ -210,14 +264,36 @@ class Stream extends Model implements Feedable
         return ! is_null($this->approved_at);
     }
 
-    public function getDurationAttribute(): ?string
+    public function duration(): Attribute
     {
-        if (is_null($this->actual_end_time)) {
-            return null;
-        }
+        return Attribute::get(function(): ?string {
+            if (is_null($this->actual_end_time)) {
+                return null;
+            }
 
-        $start_time = $this->actual_start_time ?? $this->scheduled_start_time;
+            $startTime = $this->actual_start_time ?? $this->scheduled_start_time;
 
-        return $start_time->longAbsoluteDiffForHumans($this->actual_end_time, 2);
+            return $startTime->diffInHours($this->actual_end_time).'h '.$startTime->diff($this->actual_end_time)->format('%i').'m';
+        });
+    }
+
+    public function startForHumans(): Attribute
+    {
+        return Attribute::get(function(): string {
+            if ($this->actual_start_time) {
+                return "Started {$this->actual_start_time->diffForHumans()}";
+            }
+
+            if ($this->scheduled_start_time->isPast()) {
+                return "Started {$this->scheduled_start_time->diffForHumans()}";
+            }
+
+            return "Starts {$this->scheduled_start_time->diffForHumans()}";
+        });
+    }
+
+    public function startForRobots(): Attribute
+    {
+        return Attribute::get(fn() => $this->actual_start_time?->toIso8601String() ?? $this->scheduled_start_time->toIso8601String());
     }
 }

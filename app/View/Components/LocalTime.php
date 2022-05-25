@@ -7,9 +7,8 @@ use Illuminate\View\Component;
 
 class LocalTime extends Component
 {
-    public function __construct(public Carbon $date)
+    public function __construct(public Carbon $date, public string $format = 'YYYY-MM-DD HH:mm (z)')
     {
-        ray('in class', $this->date);
     }
 
     public function render()

@@ -1,30 +1,17 @@
 <?php
 
-namespace Tests\Feature;
-
-use App\Http\Livewire\ImportYoutubeChannel;
-use App\Http\Livewire\ImportYoutubeLiveStream;
+use App\Http\Livewire\ImportYouTubeChannel;
+use App\Http\Livewire\ImportYouTubeLiveStream;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class PageDashboardTest extends TestCase
-{
-    use RefreshDatabase;
+it('includes livewire youtube import stream component', function() {
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertSeeLivewire(ImportYouTubeLiveStream::class);
+});
 
-    /** @test */
-    public function it_includes_livewire_youtube_import_stream_component(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
-            ->assertSeeLivewire(ImportYoutubeLiveStream::class);
-    }
-
-    /** @test */
-    public function it_includes_livewire_youtube_import_channel_component(): void
-    {
-        $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
-            ->assertSeeLivewire(ImportYoutubeChannel::class);
-    }
-}
+it('includes livewire youtube import channel component', function() {
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertSeeLivewire(ImportYouTubeChannel::class);
+});
