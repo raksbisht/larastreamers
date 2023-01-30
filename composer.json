@@ -17,7 +17,7 @@
         "laravel/sanctum": "^2.14",
         "laravel/tinker": "^2.7",
         "league/flysystem-ftp": "^3.0",
-        "livewire/livewire": "^2.10",
+        "livewire/livewire": "^2.11",
         "owenvoke/blade-fontawesome": "^2.0",
         "spatie/data-transfer-object": "^3.7",
         "spatie/icalendar-generator": "^2.3",
